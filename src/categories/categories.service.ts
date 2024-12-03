@@ -34,10 +34,11 @@ export class CategoriesService {
   async update(id: number, updateCategoryDto: UpdateCategoryDto) {
     const category = await this.findOne(id);
     category.name = updateCategoryDto.name;
-    return this.categoryRepository.save(category);
+    return await this.categoryRepository.save(category);
   }
 
-  remove(id: number) {
-    return this.categoryRepository.delete(id);
+  async remove(id: number) {
+    const category = await this.findOne(id);
+    return await this.categoryRepository.remove(category);
   }
 }
