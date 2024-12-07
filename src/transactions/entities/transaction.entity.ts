@@ -27,12 +27,10 @@ export class TransactionContents {
   @Column('decimal')
   price: number;
 
-  @ManyToOne(() => Product, (product) => product.id, { eager: true })
+  @ManyToOne(() => Product, (product) => product.id, { eager: true, cascade: true })
   product: Product;
 
-  @ManyToOne(() => Transaction, (transaction) => transaction.id)
+  @ManyToOne(() => Transaction, (transaction) => transaction.contents, {cascade: true})
   transaction: Transaction;
-
-  
 
 }
