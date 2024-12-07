@@ -10,8 +10,9 @@ import {
   Transaction,
   TransactionContents,
 } from './entities/transaction.entity';
-import { Repository } from 'typeorm';
+import { FindManyOptions, Repository } from 'typeorm';
 import { Product } from 'src/products/entities/product.entity';
+import { error } from 'console';
 
 @Injectable()
 export class TransactionsService {
@@ -26,8 +27,10 @@ export class TransactionsService {
 
   async create(createTransactionDto: CreateTransactionDto) {
     await this.ProductRepository.manager.transaction(async (transactionEntityManager) => {
+
       const transaction = new Transaction();
-      transaction.total = createTransactionDto.total;
+      const total = createTransactionDto.contents.reduce((total, item) => total + (item.price * item.quantity), 0);
+      transaction.total = total;
       await transactionEntityManager.save(transaction);
 
       for (const contents of createTransactionDto.contents) {
@@ -35,8 +38,16 @@ export class TransactionsService {
           id: contents.productId,
         });
 
+        let errors = [];	
+
+        if(!product ) {
+          errors.push('Product not found');
+          throw new NotFoundException(errors);
+        }
+
         if (contents.quantity > product.inventory) {
-          throw new BadRequestException('Product out of stock');
+          errors.push('Product out of stock');
+          throw new BadRequestException(errors);
         }
         product.inventory -= contents.quantity;
 
@@ -56,7 +67,12 @@ export class TransactionsService {
   }
 
   findAll() {
-    return `This action returns all transactions`;
+    const options:FindManyOptions<Transaction> = {
+      relations: {
+        contents: true,
+      }
+    }
+    return this.transactionRepository.find();
   }
 
   findOne(id: number) {
