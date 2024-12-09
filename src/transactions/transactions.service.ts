@@ -10,9 +10,10 @@ import {
   Transaction,
   TransactionContents,
 } from './entities/transaction.entity';
-import { FindManyOptions, Repository } from 'typeorm';
+import { Between, FindManyOptions, Repository } from 'typeorm';
 import { Product } from 'src/products/entities/product.entity';
 import { error } from 'console';
+import { endOfDay, isValid, parseISO, startOfDay } from 'date-fns';
 
 @Injectable()
 export class TransactionsService {
@@ -66,24 +67,61 @@ export class TransactionsService {
     });
   }
 
-  findAll() {
+  findAll(transactionDate?: string) {
     const options:FindManyOptions<Transaction> = {
       relations: {
         contents: true,
       }
     }
-    return this.transactionRepository.find();
+
+    if(transactionDate) {
+      const date = parseISO(transactionDate);
+      if(!isValid(date)) {
+        throw new BadRequestException('Invalid date format');
+      }
+      
+      const start = startOfDay(date);
+      const end = endOfDay(start);
+
+      options.where = {
+        trasactionDate: Between(start, end),
+      }
+      
+
+
+
+    }
+
+    return this.transactionRepository.find(options);
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} transaction`;
+  async findOne(id: number) {
+    const transaction = await this.transactionRepository.findOne({
+      where: { id }, relations: ['contents'],
+    });
+
+    if (!transaction) {
+      throw new NotFoundException('Transaction not found');
+    }
+
+    return transaction;
   }
 
-  update(id: number, updateTransactionDto: UpdateTransactionDto) {
-    return `This action updates a #${id} transaction`;
-  }
+  
+  async remove(id: number) {
+    const transaction = await this.findOne(id);
+    if (!transaction) {
+      throw new NotFoundException('Transaction not found');
+    }
+    for (const contents of transaction.contents) {
+      const product = await this.ProductRepository.findOneBy({id:contents.product.id});
+      product.inventory += contents.quantity;
+      await this.ProductRepository.save(product);
 
-  remove(id: number) {
-    return `This action removes a #${id} transaction`;
+      const transactionContents = await this.transactionContentsRepository.findOneBy({id:contents.id});
+      await this.transactionContentsRepository.remove(transactionContents);
+    }
+    await this.transactionRepository.remove(transaction);
+    return {message: ` #${id} transaction deleted`};
   }
 }
