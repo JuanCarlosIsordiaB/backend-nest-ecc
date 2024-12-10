@@ -52,6 +52,6 @@ export class CouponsService {
     if(isAfter(currentDate, expirationDate)) throw new UnprocessableEntityException('This Coupon is expired ');
     // 422 Error de parte del cliente (Unprocessable Entity)
 
-    return {message: 'Valid Coupon'};
+    return {message: 'Valid Coupon', ...coupon};
   }
 }

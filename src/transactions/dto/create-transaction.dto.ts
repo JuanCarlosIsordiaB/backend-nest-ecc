@@ -20,6 +20,10 @@ export class CreateTransactionDto {
   @IsNumber({}, {message: 'Cantidad no válida'})
   total: number
 
+  @IsOptional()
+  @Length(1, 30, {message: 'The Coupon must be between 1 and 30 characters'})
+  coupon: string
+
   @IsArray()
   @ArrayNotEmpty({message: 'Los Contenidos no pueden ir vacios'})
   @ValidateNested()
